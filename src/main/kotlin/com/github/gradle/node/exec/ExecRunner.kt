@@ -1,19 +1,18 @@
 package com.github.gradle.node.exec
 
-import com.github.gradle.node.NodeExtension
-import com.github.gradle.node.util.ProjectApiHelper
-import org.gradle.api.file.DirectoryProperty
+import org.gradle.process.ExecOperations
 import org.gradle.process.ExecResult
 import java.io.File
 
 /**
  * Helper function that will calculate the environment variables that should be used.
  *
- * This is operating-system aware and will check Path and PATH in additionalBinPaths on Windows
+ * This is operating system aware and will check
+ * `Path` and `PATH` in [ExecConfiguration.additionalBinPaths] on Windows.
  *
  * @param execConfiguration configuration to get environment variables from
  */
-fun computeEnvironment(execConfiguration: ExecConfiguration): Map<String, String> {
+internal fun computeEnvironment(execConfiguration: ExecConfiguration): Map<String, String> {
     val execEnvironment = mutableMapOf<String, String>()
     execEnvironment += System.getenv()
     execEnvironment += execConfiguration.environment
@@ -29,8 +28,8 @@ fun computeEnvironment(execConfiguration: ExecConfiguration): Map<String, String
     return execEnvironment
 }
 
-fun computeWorkingDir(nodeProjectDir: DirectoryProperty, execConfiguration: ExecConfiguration): File? {
-    val workingDir = execConfiguration.workingDir ?: nodeProjectDir.get().asFile
+internal fun computeWorkingDir(nodeProjectDir: File, execConfiguration: ExecConfiguration): File {
+    val workingDir = execConfiguration.workingDir ?: nodeProjectDir
     workingDir.mkdirs()
     return workingDir
 }
@@ -42,13 +41,17 @@ fun computeWorkingDir(nodeProjectDir: DirectoryProperty, execConfiguration: Exec
  * different meaning to its values.
  */
 class ExecRunner {
-    fun execute(projectHelper: ProjectApiHelper, extension: NodeExtension, execConfiguration: ExecConfiguration): ExecResult {
-        return projectHelper.exec {
+    fun execute(
+        execOps: ExecOperations,
+        nodeProjectDir: File,
+        execConfiguration: ExecConfiguration
+    ): ExecResult {
+        return execOps.exec {
             executable = execConfiguration.executable
             args = execConfiguration.args
             environment = computeEnvironment(execConfiguration)
             isIgnoreExitValue = execConfiguration.ignoreExitValue
-            workingDir = computeWorkingDir(extension.nodeProjectDir, execConfiguration)
+            workingDir = computeWorkingDir(nodeProjectDir, execConfiguration)
             execConfiguration.execOverrides?.execute(this)
         }
     }

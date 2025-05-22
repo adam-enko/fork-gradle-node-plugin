@@ -24,8 +24,7 @@ abstract class PnpmSetupTask : NpmSetupTask() {
 
     @get:OutputDirectory
     val pnpmDir by lazy {
-        val variantComputer = VariantComputer()
-        variantComputer.computePnpmDir(nodeExtension)
+        VariantComputer.computePnpmDir(nodeExtension)
     }
 
     override fun computeCommand(): List<String> {

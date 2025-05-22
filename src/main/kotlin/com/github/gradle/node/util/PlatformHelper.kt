@@ -12,8 +12,11 @@ internal enum class OsType(val osName: String) {
 }
 
 internal fun parsePlatform(type: OsType, arch: String, uname: () -> String): Platform {
-    val osArch = if (type == OsType.WINDOWS) parseWindowsArch(arch.toLowerCase(), uname)
-                 else parseOsArch(arch.toLowerCase(), uname)
+    val osArch = if (type == OsType.WINDOWS) {
+        parseWindowsArch(arch.toLowerCase(), uname)
+    } else {
+        parseOsArch(arch.toLowerCase(), uname)
+    }
     return Platform(type.osName, osArch)
 }
 
@@ -30,11 +33,11 @@ internal fun parseOsType(type: String): OsType {
     }
 }
 
-fun parsePlatform(name: String, arch: String, uname: () -> String): Platform {
+internal fun parsePlatform(name: String, arch: String, uname: () -> String): Platform {
     return Platform(parseOsName(name.toLowerCase()), parseOsArch(arch.toLowerCase(), uname))
 }
 
-fun parseOsName(name: String): String {
+internal fun parseOsName(name: String): String {
     return when {
         name.contains("windows") -> "win"
         name.contains("mac") -> "darwin"
@@ -46,7 +49,7 @@ fun parseOsName(name: String): String {
     }
 }
 
-fun parseOsArch(arch: String, uname: Callable<String>): String {
+internal fun parseOsArch(arch: String, uname: Callable<String>): String {
     return when {
         /*
          * As Java just returns "arm" on all ARM variants, we need a system call to determine the exact arch. Unfortunately some JVMs say aarch32/64, so we need an additional
@@ -54,7 +57,8 @@ fun parseOsArch(arch: String, uname: Callable<String>): String {
          */
         arch == "arm" || arch.startsWith("aarch") -> uname.call()
             .mapIf({ it == "armv8l" || it == "aarch64" }) { "arm64" }
-            .mapIf({ it == "x86_64" }) {"x64"}
+            .mapIf({ it == "x86_64" }) { "x64" }
+
         arch == "ppc64" -> "ppc64"
         arch == "ppc64le" -> "ppc64le"
         arch == "s390x" -> "s390x"
@@ -63,12 +67,12 @@ fun parseOsArch(arch: String, uname: Callable<String>): String {
     }
 }
 
-fun parseWindowsArch(arch: String, uname: Callable<String>): String {
+internal fun parseWindowsArch(arch: String, uname: () -> String): String {
     //
     return when {
         arch.startsWith("aarch") || arch.startsWith("arm")
-        -> {
-            val wmiArch = uname.call()
+            -> {
+            val wmiArch = uname()
             return when (wmiArch) {
                 /*
                  * Parse Win32_Processor.Architectures to real processor type
@@ -84,31 +88,32 @@ fun parseWindowsArch(arch: String, uname: Callable<String>): String {
                 else -> error("Unexpected Win32_Processor.Architecture: $arch")
             }
         }
+
         arch.contains("64") -> "x64"
         else -> "x86"
     }
 }
 
-fun main(args: Array<String>) {
-    val osName = System.getProperty("os.name")
-    val osArch = System.getProperty("os.arch")
-
-    val osType = parseOsType(osName)
-    val uname = {
-        val args = if (osType == OsType.WINDOWS) {
-            listOf("powershell", "-NoProfile", "-Command", "(Get-WmiObject Win32_Processor).Architecture")
-        } else {
-            listOf("uname", "-m")
-        }
-        execute(*args.toTypedArray(), timeout = 10)
-    }
-    val platform = parsePlatform(osName, osArch, uname)
-
-    println("Your os.name is: '${osName}' and is parsed as: '${platform.name}'")
-    println("Your os.arch is: '${osArch}' and is parsed as: '${platform.arch}'")
-    if (platform.isWindows()) {
-        println("You're on windows (isWindows == true)")
-    } else {
-        println("You're not on windows (isWindows == false)")
-    }
-}
+//fun main(args: Array<String>) {
+//    val osName = System.getProperty("os.name")
+//    val osArch = System.getProperty("os.arch")
+//
+//    val osType = parseOsType(osName)
+//    val uname = {
+//        val args = if (osType == OsType.WINDOWS) {
+//            listOf("powershell", "-NoProfile", "-Command", "(Get-WmiObject Win32_Processor).Architecture")
+//        } else {
+//            listOf("uname", "-m")
+//        }
+//        execute(*args.toTypedArray(), timeout = 10)
+//    }
+//    val platform = parsePlatform(osName, osArch, uname)
+//
+//    println("Your os.name is: '${osName}' and is parsed as: '${platform.name}'")
+//    println("Your os.arch is: '${osArch}' and is parsed as: '${platform.arch}'")
+//    if (platform.isWindows()) {
+//        println("You're on windows (isWindows == true)")
+//    } else {
+//        println("You're not on windows (isWindows == false)")
+//    }
+//}

@@ -7,6 +7,7 @@ import com.github.gradle.node.npm.exec.NpmExecRunner
 import com.github.gradle.node.task.BaseTask
 import com.github.gradle.node.task.NodeSetupTask
 import com.github.gradle.node.util.DefaultProjectApiHelper
+import com.github.gradle.node.variant.VariantComputer
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
@@ -45,7 +46,7 @@ abstract class NpmSetupTask : BaseTask() {
     @get:OutputDirectory
     val npmDir by lazy {
         val nodeDir = nodeExtension.resolvedNodeDir
-        variantComputer.computeNpmDir(nodeExtension, nodeDir)
+        VariantComputer.computeNpmDir(nodeExtension, nodeDir)
     }
 
     init {
@@ -72,7 +73,7 @@ abstract class NpmSetupTask : BaseTask() {
         val command = computeCommand()
         val nodeExecConfiguration = NodeExecConfiguration(command)
         val npmExecRunner = objects.newInstance(NpmExecRunner::class.java)
-        result = npmExecRunner.executeNpmCommand(projectHelper, nodeExtension, nodeExecConfiguration, variantComputer)
+        result = npmExecRunner.executeNpmCommand(projectHelper, nodeExtension, nodeExecConfiguration )
     }
 
     protected open fun computeCommand(): List<String> {

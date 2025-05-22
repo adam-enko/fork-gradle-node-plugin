@@ -20,66 +20,91 @@ abstract class NpmExecRunner {
     @get:Inject
     abstract val providers: ProviderFactory
 
-    fun executeNpmCommand(project: ProjectApiHelper, extension: NodeExtension, nodeExecConfiguration: NodeExecConfiguration, variants: VariantComputer): ExecResult {
-        val npmExecConfiguration = NpmExecConfiguration("npm"
-        ) { variantComputer, nodeExtension, npmBinDir -> variantComputer.computeNpmExec(nodeExtension, npmBinDir) }
-        return executeCommand(project, extension, NpmProxy.addProxyEnvironmentVariables(extension.nodeProxySettings.get(), nodeExecConfiguration),
-                npmExecConfiguration,
-            variants)
+    fun executeNpmCommand(
+        project: ProjectApiHelper,
+        extension: NodeExtension,
+        nodeExecConfiguration: NodeExecConfiguration,
+    ): ExecResult {
+        val npmExecConfiguration = NpmExecConfiguration(
+            "npm"
+        ) { nodeExtension, npmBinDir ->
+            VariantComputer.computeNpmExec(nodeExtension, npmBinDir)
+        }
+        return executeCommand(
+            project,
+            extension,
+            NpmProxy.addProxyEnvironmentVariables(extension.nodeProxySettings.get(), nodeExecConfiguration),
+            npmExecConfiguration,
+        )
     }
 
-    fun executeNpxCommand(project: ProjectApiHelper, extension: NodeExtension, nodeExecConfiguration: NodeExecConfiguration, variants: VariantComputer): ExecResult {
-        val npxExecConfiguration = NpmExecConfiguration("npx") { variantComputer, nodeExtension, npmBinDir ->
-            variantComputer.computeNpxExec(nodeExtension, npmBinDir)
+    fun executeNpxCommand(
+        project: ProjectApiHelper,
+        extension: NodeExtension,
+        nodeExecConfiguration: NodeExecConfiguration,
+    ): ExecResult {
+        val npxExecConfiguration = NpmExecConfiguration("npx") { nodeExtension, npmBinDir ->
+            VariantComputer.computeNpxExec(nodeExtension, npmBinDir)
         }
 
-        return executeCommand(project, extension, nodeExecConfiguration, npxExecConfiguration, variants)
+        return executeCommand(project, extension, nodeExecConfiguration, npxExecConfiguration)
     }
 
-    private fun executeCommand(project: ProjectApiHelper, extension: NodeExtension, nodeExecConfiguration: NodeExecConfiguration,
-                               npmExecConfiguration: NpmExecConfiguration,
-                               variantComputer: VariantComputer): ExecResult {
+    private fun executeCommand(
+        project: ProjectApiHelper,
+        extension: NodeExtension,
+        nodeExecConfiguration: NodeExecConfiguration,
+        npmExecConfiguration: NpmExecConfiguration,
+    ): ExecResult {
         val execConfiguration =
-                computeExecConfiguration(extension, npmExecConfiguration, nodeExecConfiguration, variantComputer).get()
+            computeExecConfiguration(extension, npmExecConfiguration, nodeExecConfiguration).get()
         val execRunner = ExecRunner()
         return execRunner.execute(project, extension, execConfiguration)
     }
 
-    private fun computeExecConfiguration(extension: NodeExtension, npmExecConfiguration: NpmExecConfiguration,
-                                         nodeExecConfiguration: NodeExecConfiguration,
-                                         variantComputer: VariantComputer): Provider<ExecConfiguration> {
-        val additionalBinPathProvider = computeAdditionalBinPath(extension, variantComputer)
-        val executableAndScriptProvider = computeExecutable(extension, npmExecConfiguration, variantComputer)
+    private fun computeExecConfiguration(
+        extension: NodeExtension, npmExecConfiguration: NpmExecConfiguration,
+        nodeExecConfiguration: NodeExecConfiguration,
+    ): Provider<ExecConfiguration> {
+        val additionalBinPathProvider = computeAdditionalBinPath(extension)
+        val executableAndScriptProvider = computeExecutable(extension, npmExecConfiguration)
         return zip(additionalBinPathProvider, executableAndScriptProvider)
-                .map { (additionalBinPath, executableAndScript) ->
-                    val argsPrefix =
-                            if (executableAndScript.script != null) listOf(executableAndScript.script) else listOf()
-                    val args = argsPrefix.plus(nodeExecConfiguration.command)
-                    ExecConfiguration(executableAndScript.executable, args, additionalBinPath,
-                            nodeExecConfiguration.environment, nodeExecConfiguration.workingDir,
-                            nodeExecConfiguration.ignoreExitValue, nodeExecConfiguration.execOverrides)
-                }
+            .map { (additionalBinPath, executableAndScript) ->
+                val argsPrefix =
+                    if (executableAndScript.script != null) listOf(executableAndScript.script) else listOf()
+                val args = argsPrefix.plus(nodeExecConfiguration.command)
+                ExecConfiguration(
+                    executable = executableAndScript.executable,
+                    args = args,
+                    additionalBinPaths = additionalBinPath,
+                    environment = nodeExecConfiguration.environment,
+                    workingDir = nodeExecConfiguration.workingDir,
+                    ignoreExitValue = nodeExecConfiguration.ignoreExitValue,
+                    execOverrides = nodeExecConfiguration.execOverrides
+                )
+            }
     }
 
     private fun computeExecutable(
         nodeExtension: NodeExtension,
         npmExecConfiguration: NpmExecConfiguration,
-        variantComputer: VariantComputer
-    ):
-            Provider<ExecutableAndScript> {
+    ): Provider<ExecutableAndScript> {
         val nodeDirProvider = nodeExtension.resolvedNodeDir
-        val npmDirProvider = variantComputer.computeNpmDir(nodeExtension, nodeDirProvider)
-        val nodeBinDirProvider = variantComputer.computeNodeBinDir(nodeDirProvider, nodeExtension.resolvedPlatform)
-        val npmBinDirProvider = variantComputer.computeNpmBinDir(npmDirProvider, nodeExtension.resolvedPlatform)
+        val npmDirProvider = VariantComputer.computeNpmDir(nodeExtension, nodeDirProvider)
+        val nodeBinDirProvider = VariantComputer.computeNodeBinDir(nodeDirProvider, nodeExtension.resolvedPlatform)
+        val npmBinDirProvider = VariantComputer.computeNpmBinDir(npmDirProvider, nodeExtension.resolvedPlatform)
         val nodeExecProvider = computeNodeExec(nodeExtension, nodeBinDirProvider)
         val executableProvider =
-            npmExecConfiguration.commandExecComputer(variantComputer, nodeExtension, npmBinDirProvider)
+            npmExecConfiguration.commandExecComputer(nodeExtension, npmBinDirProvider)
         val isWindows = nodeExtension.resolvedPlatform.get().isWindows()
         val npmScriptFileProvider =
             computeNpmScriptFile(nodeDirProvider, npmExecConfiguration.command, isWindows)
         return zip(
-            nodeExtension.download, nodeExtension.nodeProjectDir, executableProvider, nodeExecProvider,
-            npmScriptFileProvider
+            nodeExtension.download,
+            nodeExtension.nodeProjectDir,
+            executableProvider,
+            nodeExecProvider,
+            npmScriptFileProvider,
         ).map {
             val (download, nodeProjectDir, executable, nodeExec,
                 npmScriptFile) = it
@@ -97,19 +122,21 @@ abstract class NpmExecRunner {
     }
 
     private data class ExecutableAndScript(
-            val executable: String,
-            val script: String? = null
+        val executable: String,
+        val script: String? = null
     )
 
-    private fun computeAdditionalBinPath(nodeExtension: NodeExtension, variantComputer: VariantComputer): Provider<List<String>> {
+    private fun computeAdditionalBinPath(
+        nodeExtension: NodeExtension,
+    ): Provider<List<String>> {
         return nodeExtension.download.flatMap { download ->
             if (!download) {
                 providers.provider { listOf<String>() }
             }
             val nodeDirProvider = nodeExtension.resolvedNodeDir
-            val nodeBinDirProvider = variantComputer.computeNodeBinDir(nodeDirProvider, nodeExtension.resolvedPlatform)
-            val npmDirProvider = variantComputer.computeNpmDir(nodeExtension, nodeDirProvider)
-            val npmBinDirProvider = variantComputer.computeNpmBinDir(npmDirProvider, nodeExtension.resolvedPlatform)
+            val nodeBinDirProvider = VariantComputer.computeNodeBinDir(nodeDirProvider, nodeExtension.resolvedPlatform)
+            val npmDirProvider = VariantComputer.computeNpmDir(nodeExtension, nodeDirProvider)
+            val npmBinDirProvider = VariantComputer.computeNpmBinDir(npmDirProvider, nodeExtension.resolvedPlatform)
             zip(npmBinDirProvider, nodeBinDirProvider).map { (npmBinDir, nodeBinDir) ->
                 listOf(npmBinDir, nodeBinDir).map { file -> file.asFile.absolutePath }
             }

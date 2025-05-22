@@ -26,7 +26,7 @@ abstract class AbstractIntegTest extends Specification {
     }
 
     protected final GradleRunner newRunner(final String... args) {
-        List<String> additionalArgs = ["--warning-mode=fail"]
+        List<String> additionalArgs = ["--warning-mode=fail", "--stacktrace"]
         if (isConfigurationCacheEnabled()) {
             additionalArgs.add("--configuration-cache")
         }

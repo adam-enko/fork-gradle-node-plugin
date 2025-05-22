@@ -38,11 +38,13 @@ interface ProjectApiHelper {
 /**
  * Used in Gradle 6.6 and newer.
  */
-open class DefaultProjectApiHelper @Inject constructor(
-        private val factory: ObjectFactory,
-        private val execOperations: ExecOperations,
-        private val fileSystemOperations: FileSystemOperations,
-        private val archiveOperations: ArchiveOperations) : ProjectApiHelper {
+@Deprecated(message = "Just inject services...")
+abstract class DefaultProjectApiHelper @Inject constructor(
+    private val factory: ObjectFactory,
+    private val execOperations: ExecOperations,
+    private val fileSystemOperations: FileSystemOperations,
+    private val archiveOperations: ArchiveOperations
+) : ProjectApiHelper {
 
     override fun fileTree(directory: Directory): ConfigurableFileTree {
         return factory.fileTree().from(directory)
@@ -69,32 +71,32 @@ open class DefaultProjectApiHelper @Inject constructor(
     }
 }
 
-/**
- * Used to support Gradle versions older than 6.6
- */
-open class LegacyProjectApiHelper(private val project: Project) : ProjectApiHelper {
-
-    override fun fileTree(directory: Directory): ConfigurableFileTree {
-        return project.fileTree(directory)
-    }
-
-    override fun zipTree(tarPath: File): FileTree {
-        return project.zipTree(tarPath)
-    }
-
-    override fun tarTree(tarPath: File): FileTree {
-        return project.tarTree(tarPath)
-    }
-
-    override fun copy(action: Action<CopySpec>): WorkResult {
-        return project.copy(action)
-    }
-
-    override fun delete(action: Action<DeleteSpec>): WorkResult {
-        return project.delete(action)
-    }
-
-    override fun exec(action: Action<ExecSpec>): ExecResult {
-        return project.exec(action)
-    }
-}
+///**
+// * Used to support Gradle versions older than 6.6
+// */
+//open class LegacyProjectApiHelper(private val project: Project) : ProjectApiHelper {
+//
+//    override fun fileTree(directory: Directory): ConfigurableFileTree {
+//        return project.fileTree(directory)
+//    }
+//
+//    override fun zipTree(tarPath: File): FileTree {
+//        return project.zipTree(tarPath)
+//    }
+//
+//    override fun tarTree(tarPath: File): FileTree {
+//        return project.tarTree(tarPath)
+//    }
+//
+//    override fun copy(action: Action<CopySpec>): WorkResult {
+//        return project.copy(action)
+//    }
+//
+//    override fun delete(action: Action<DeleteSpec>): WorkResult {
+//        return project.delete(action)
+//    }
+//
+//    override fun exec(action: Action<ExecSpec>): ExecResult {
+//        return project.exec(action)
+//    }
+//}

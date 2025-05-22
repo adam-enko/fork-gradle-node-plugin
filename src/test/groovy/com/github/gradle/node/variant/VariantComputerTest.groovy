@@ -1,6 +1,7 @@
 package com.github.gradle.node.variant
 
 import com.github.gradle.node.NodeExtension
+import com.github.gradle.node.NodePlugin
 import com.github.gradle.node.util.Platform
 import com.github.gradle.node.util.PlatformHelperKt
 import org.gradle.testfixtures.ProjectBuilder
@@ -8,12 +9,10 @@ import spock.lang.Specification
 import spock.lang.Unroll
 
 class VariantComputerTest extends Specification {
-    /* OS dependant line separator */
-
+    /** OS dependant line separator */
     static final String PS = File.separator
 
-    /* Relative base path for nodejs installation */
-
+    /** Relative base path for nodejs installation */
     static final String NODE_BASE_PATH = "${PS}.gradle${PS}node${PS}"
 
     @Unroll
@@ -23,7 +22,8 @@ class VariantComputerTest extends Specification {
 
         def platform = getPlatform("Windows 8", osArch)
 
-        def nodeExtension = new NodeExtension(project)
+        project.plugins.apply(NodePlugin.class)
+        def nodeExtension = project.objects.newInstance(NodeExtension.class)
         nodeExtension.resolvedPlatform.set(platform)
         nodeExtension.download.set(true)
         nodeExtension.version.set(version)
@@ -32,7 +32,7 @@ class VariantComputerTest extends Specification {
         def nodeDir = "node-v${version}-win-${osArch}".toString()
         def depName = "org.nodejs:node:${version}:win-${osArch}@zip".toString()
 
-        def variantComputer = new VariantComputer()
+        def variantComputer = VariantComputer.INSTANCE
 
         when:
         def isWindows = platform.isWindows()
@@ -67,14 +67,15 @@ class VariantComputerTest extends Specification {
         given:
         def platform = getPlatform(osName, osArch)
 
-        def project = ProjectBuilder.builder().build()
-        def nodeExtension = new NodeExtension(project)
+
+        project.plugins.apply(NodePlugin.class)
+        def nodeExtension = project.objects.newInstance(NodeExtension.class)
         nodeExtension.resolvedPlatform.set(platform)
         nodeExtension.download.set(true)
         nodeExtension.version.set('5.12.0')
         nodeExtension.workDir.set(project.layout.projectDirectory.dir(".gradle/node"))
 
-        def variantComputer = new VariantComputer()
+        def variantComputer = VariantComputer.INSTANCE
 
         when:
         def isWindows = platform.isWindows()
@@ -112,14 +113,15 @@ class VariantComputerTest extends Specification {
         given:
         def platform = getPlatform(osName, osArch, sysOsArch)
 
-        def project = ProjectBuilder.builder().build()
-        def nodeExtension = new NodeExtension(project)
+
+        project.plugins.apply(NodePlugin.class)
+        def nodeExtension = project.objects.newInstance(NodeExtension.class)
         nodeExtension.resolvedPlatform.set(platform)
         nodeExtension.download.set(true)
         nodeExtension.version.set('5.12.0')
         nodeExtension.workDir.set(project.layout.projectDirectory.dir(".gradle/node"))
 
-        def variantComputer = new VariantComputer()
+        def variantComputer = VariantComputer.INSTANCE
 
         when:
         def isWindows = platform.isWindows()
@@ -153,12 +155,13 @@ class VariantComputerTest extends Specification {
         def platform = getPlatform("Windows 8", "x86")
         def project = ProjectBuilder.builder().build()
 
-        def nodeExtension = new NodeExtension(project)
+        project.plugins.apply(NodePlugin.class)
+        def nodeExtension = project.objects.newInstance(NodeExtension.class)
         nodeExtension.resolvedPlatform.set(platform)
         nodeExtension.download.set(download)
         nodeExtension.npmVersion.set(npmVersion)
 
-        def variantComputer = new VariantComputer()
+        def variantComputer = VariantComputer.INSTANCE
 
         when:
         def resolvedNodeDir = VariantComputerKt.computeNodeDir(nodeExtension)
@@ -204,12 +207,13 @@ class VariantComputerTest extends Specification {
         def platform = getPlatform("Linux", "x86")
         def project = ProjectBuilder.builder().build()
 
-        def nodeExtension = new NodeExtension(project)
+        project.plugins.apply(NodePlugin.class)
+        def nodeExtension = project.objects.newInstance(NodeExtension.class)
         nodeExtension.resolvedPlatform.set(platform)
         nodeExtension.download.set(download)
         nodeExtension.npmVersion.set(npmVersion)
 
-        def variantComputer = new VariantComputer()
+        def variantComputer = VariantComputer.INSTANCE
 
         when:
         def resolvedNodeDir = VariantComputerKt.computeNodeDir(nodeExtension)
@@ -257,11 +261,13 @@ class VariantComputerTest extends Specification {
         def platform = getPlatform("Linux", "x86")
         def project = ProjectBuilder.builder().build()
 
-        def nodeExtension = new NodeExtension(project)
+
+        project.plugins.apply(NodePlugin.class)
+        def nodeExtension = project.objects.newInstance(NodeExtension.class)
         nodeExtension.resolvedPlatform.set(platform)
         nodeExtension.download.set(download)
 
-        def variantComputer = new VariantComputer()
+        def variantComputer = VariantComputer.INSTANCE
 
         when:
         def resolvedBunDir = variantComputer.computeBunDir(nodeExtension)
@@ -287,7 +293,7 @@ class VariantComputerTest extends Specification {
         download << [true, false]
     }
 
-    private Platform getPlatform(String osName, String osArch, uname = null) {
+    private static Platform getPlatform(String osName, String osArch, uname = null) {
         return PlatformHelperKt.parsePlatform(osName, osArch, { uname })
     }
 }

@@ -9,11 +9,9 @@ abstract class BaseTask : DefaultTask() {
 
     @get:Internal
     var result: ExecResult? = null
+        protected set
 
+    @Deprecated("asd", ReplaceWith("com.github.gradle.node.variant.VariantComputer"))
     @get:Internal
-    internal val variantComputer by lazy {
-        VariantComputer()
-    }
-
-
+    internal val variantComputer: VariantComputer = VariantComputer
 }

@@ -1,17 +1,11 @@
 package com.github.gradle.node.bun.task
 
 import com.github.gradle.AbstractIntegTest
-import com.github.gradle.node.NodeExtension
 import com.github.gradle.node.bun.BunUtils
 import org.gradle.testkit.runner.TaskOutcome
-import org.junit.Rule
-import org.junit.contrib.java.lang.system.EnvironmentVariables
-import spock.lang.Ignore
 import spock.lang.IgnoreIf
 
 import java.util.regex.Pattern
-
-import static com.github.gradle.node.NodeExtension.DEFAULT_NPM_VERSION
 
 @IgnoreIf({ os.windows })
 class BunxTask_integTest extends AbstractIntegTest {

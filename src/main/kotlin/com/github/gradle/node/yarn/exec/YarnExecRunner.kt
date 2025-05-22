@@ -15,8 +15,8 @@ import org.gradle.process.ExecResult
 import javax.inject.Inject
 
 abstract class YarnExecRunner {
-    @get:Inject
-    abstract val providers: ProviderFactory
+//    @get:Inject
+//    abstract val providers: ProviderFactory
 
     fun executeYarnCommand(
         project: ProjectApiHelper,

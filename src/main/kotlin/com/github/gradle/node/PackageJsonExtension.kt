@@ -1,59 +1,116 @@
 package com.github.gradle.node
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
-import org.gradle.api.Project
+//import com.fasterxml.jackson.databind.JsonNode
+//import com.fasterxml.jackson.databind.ObjectMapper
+import groovy.json.JsonSlurper
+import org.gradle.api.file.ProjectLayout
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
+import org.gradle.api.provider.ProviderFactory
 import org.gradle.kotlin.dsl.property
+import javax.inject.Inject
 
 /**
  * Provides a parsed view of package.json
  */
-open class PackageJsonExtension(project: Project) {
+abstract class PackageJsonExtension
+@Inject internal constructor(
+    private val objects: ObjectFactory,
+    private val providers: ProviderFactory,
+    private val layout: ProjectLayout,
+) {
 
-    /**
-     * Raw JsonNode returned by Jackson, this may be removed in a future release
-     */
-    val node = project.objects.property<JsonNode>()
+//    /**
+//     * Raw JsonNode returned by Jackson, this may be removed in a future release
+//     */
+//    abstract val node: Property<JsonNode>
 
-    init {
-        node.finalizeValueOnRead()
-        node.set(project.provider { project.file("package.json").let(ObjectMapper()::readTree) })
+    val packageJsonContent: Property<String> = objects.property<String>()
+        .convention(
+            providers.provider {
+                layout.projectDirectory.file("package.json")
+                    .asFile
+                    .takeIf { it.exists() }
+                    ?.readText()
+            }
+        )
+
+//    init {
+//        node.finalizeValueOnRead()
+//        node.set(providers.provider {
+//            layout.projectDirectory.file("package.json")
+//                .asFile
+//                .let(ObjectMapper()::readTree)
+//        })
+//
+//        packageJsonContent.convention(
+//            providers.provider {
+//                layout.projectDirectory.file("package.json")
+//                    .asFile
+//                    .takeIf { it.exists() }
+//                    ?.readText()
+//            }
+//        )
+//
+//    }
+
+    private val packageJsonData: Provider<Map<*, *>> = packageJsonContent.map { text ->
+        JsonSlurper().parseText(text) as? Map<*, *>
+            ?: error("Could not parse package.json")
     }
 
-    val name = project.provider { node.get().get("name")?.asText() }
+    val name: Provider<String> =
+        packageJsonData.map2 { it["name"]?.toString() }
+//        providers.provider { node.get().get("name")?.asText() }
 
-    val version = project.provider { node.get().get("version")?.asText() }
+    val version: Provider<String> =
+        packageJsonData.map2 { it["version"]?.toString() }
+//        providers.provider { node.get().get("version")?.asText() }
 
-    val description = project.provider { node.get().get("description")?.asText() }
+    val description: Provider<String> =
+        packageJsonData.map2 { it["description"]?.toString() }
 
-    val homepage = project.provider { node.get().get("homepage")?.asText() }
+    val homepage: Provider<String> =
+        packageJsonData.map2 { it["homepage"]?.toString() }
 
-    val license = project.provider { node.get().get("license")?.asText() }
+    val license: Provider<String> =
+        packageJsonData.map2 { it["license"]?.toString() }
 
-    val private = project.provider { node.get().get("private")?.asBoolean() }
+    val private: Provider<Boolean> =
+        packageJsonData.map2 { it["private"] as? Boolean }
 
     /**
      * Get the text value of a given field
      */
     fun get(name: String): String? {
-        return node.get().get(name)?.asText()
+        return packageJsonData.orNull?.get(name)?.toString()
     }
 
     /**
      * Get the boolean value of a given field
      */
     fun getBoolean(name: String): Boolean? {
-        return node.get().get(name)?.asBoolean()
+        return packageJsonData.orNull?.get(name) as? Boolean
     }
 
     /**
      * Get the text value of a field containing nested objects
      *
-     * e.g. <pre>{ "outer": { "inner": "nested } }</pre>
+     * e.g. `{ "outer": { "inner": "nested } }`
      */
-    fun get(vararg name: String): String {
-        return name.fold(node.get()) { acc, next -> acc.get(next) }.asText()
+    fun get(vararg names: String): String? {
+        require(names.isNotEmpty()) { "names must not be empty" }
+        val data = packageJsonData.orNull ?: return null
+        val path = names.dropLast(1)
+        val last = path.fold(data) { acc, next ->
+            acc[next] as? Map<*, *> ?: return null
+        }
+        return last.get(names.last())?.toString()
     }
+
+    private fun <T : Any, R : Any> Provider<T>.map2(mapper: (T) -> R?): Provider<R> =
+        flatMap { providers.provider { mapper(it) } }
 
     companion object {
         /**

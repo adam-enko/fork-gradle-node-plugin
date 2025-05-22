@@ -4,7 +4,6 @@ package com.github.gradle.node.npm.task
 import com.github.gradle.node.task.AbstractTaskTest
 import com.github.gradle.node.util.PlatformHelperKt
 import com.github.gradle.node.variant.VariantComputer
-import com.github.gradle.node.variant.VariantComputerKt
 
 class NpxTaskTest extends AbstractTaskTest {
     def "exec npx task"() {

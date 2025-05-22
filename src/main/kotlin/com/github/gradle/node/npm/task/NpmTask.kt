@@ -7,14 +7,16 @@ import com.github.gradle.node.npm.exec.NpmExecRunner
 import com.github.gradle.node.task.BaseTask
 import com.github.gradle.node.util.DefaultProjectApiHelper
 import org.gradle.api.Action
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.MapProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.listProperty
-import org.gradle.kotlin.dsl.mapProperty
 import org.gradle.kotlin.dsl.newInstance
 import org.gradle.kotlin.dsl.property
 import org.gradle.process.ExecSpec
@@ -29,29 +31,29 @@ abstract class NpmTask : BaseTask() {
 
     @get:Optional
     @get:Input
-    val npmCommand = objects.listProperty<String>()
+    abstract val npmCommand: ListProperty<String>
 
     @get:Optional
     @get:Input
-    val args = objects.listProperty<String>()
+    abstract val args: ListProperty<String>
 
     @get:Input
-    val ignoreExitValue = objects.property<Boolean>().convention(false)
+    val ignoreExitValue: Property<Boolean> = objects.property<Boolean>().convention(false)
 
     @get:Internal
-    val workingDir = objects.fileProperty()
+    abstract val workingDir: RegularFileProperty
 
     @get:Input
-    val environment = objects.mapProperty<String, String>()
+    abstract val environment: MapProperty<String, String>
 
     @get:Internal
-    val execOverrides = objects.property<Action<ExecSpec>>()
+    abstract val execOverrides: Property<Action<ExecSpec>>
 
     @get:Internal
-    val projectHelper = project.objects.newInstance<DefaultProjectApiHelper>()
+    val projectHelper: DefaultProjectApiHelper = objects.newInstance<DefaultProjectApiHelper>()
 
     @get:Internal
-    val nodeExtension = NodeExtension[project]
+    val nodeExtension: NodeExtension = NodeExtension[project]
 
     init {
         group = NodePlugin.NPM_GROUP
@@ -68,9 +70,14 @@ abstract class NpmTask : BaseTask() {
     fun exec() {
         val command = npmCommand.get().plus(args.get())
         val nodeExecConfiguration =
-                NodeExecConfiguration(command, environment.get(), workingDir.asFile.orNull, ignoreExitValue.get(),
-                        execOverrides.orNull)
-        val npmExecRunner = objects.newInstance(NpmExecRunner::class.java)
-        result = npmExecRunner.executeNpmCommand(projectHelper, nodeExtension, nodeExecConfiguration, variantComputer)
+            NodeExecConfiguration(
+                command,
+                environment.get(),
+                workingDir.asFile.orNull,
+                ignoreExitValue.get(),
+                execOverrides.orNull,
+            )
+        val npmExecRunner = objects.newInstance<NpmExecRunner>()
+        result = npmExecRunner.executeNpmCommand(projectHelper, nodeExtension, nodeExecConfiguration)
     }
 }

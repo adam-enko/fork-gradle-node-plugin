@@ -3,6 +3,7 @@ package com.github.gradle.node.bun.task
 import com.github.gradle.node.NodePlugin
 import com.github.gradle.node.npm.task.NpmSetupTask
 import com.github.gradle.node.variant.VariantComputer
+import org.gradle.api.file.Directory
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputDirectory
@@ -23,10 +24,7 @@ abstract class BunSetupTask : NpmSetupTask() {
     }
 
     @get:OutputDirectory
-    val bunDir by lazy {
-        val variantComputer = VariantComputer()
-        variantComputer.computeBunDir(nodeExtension)
-    }
+    val bunDir: Provider<Directory> = VariantComputer.computeBunDir(nodeExtension)
 
     override fun computeCommand(): List<String> {
         val version = nodeExtension.bunVersion.get()

@@ -7,14 +7,16 @@ import com.github.gradle.node.pnpm.exec.PnpmExecRunner
 import com.github.gradle.node.task.BaseTask
 import com.github.gradle.node.util.DefaultProjectApiHelper
 import org.gradle.api.Action
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.MapProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.listProperty
-import org.gradle.kotlin.dsl.mapProperty
 import org.gradle.kotlin.dsl.newInstance
 import org.gradle.kotlin.dsl.property
 import org.gradle.process.ExecSpec
@@ -29,29 +31,29 @@ abstract class PnpmTask : BaseTask() {
 
     @get:Optional
     @get:Input
-    val pnpmCommand = objects.listProperty<String>()
+    abstract val pnpmCommand: ListProperty<String>
 
     @get:Optional
     @get:Input
-    val args = objects.listProperty<String>()
+    abstract val args: ListProperty<String>
 
     @get:Input
-    val ignoreExitValue = objects.property<Boolean>().convention(false)
+    val ignoreExitValue: Property<Boolean> = objects.property<Boolean>().convention(false)
 
     @get:Internal
-    val workingDir = objects.directoryProperty()
+    abstract val workingDir: DirectoryProperty
 
     @get:Input
-    val environment = objects.mapProperty<String, String>()
+    abstract val environment: MapProperty<String, String>
 
     @get:Internal
-    val execOverrides = objects.property<Action<ExecSpec>>()
+    abstract val execOverrides: Property<Action<ExecSpec>>
 
     @get:Internal
     val projectHelper = project.objects.newInstance<DefaultProjectApiHelper>()
 
     @get:Internal
-    val nodeExtension = NodeExtension[project]
+    val nodeExtension: NodeExtension = NodeExtension[project]
 
     init {
         group = NodePlugin.NODE_GROUP
@@ -73,6 +75,6 @@ abstract class PnpmTask : BaseTask() {
                 ignoreExitValue.get(), execOverrides.orNull
             )
         val pnpmExecRunner = objects.newInstance(PnpmExecRunner::class.java)
-        result = pnpmExecRunner.executePnpmCommand(projectHelper, nodeExtension, nodeExecConfiguration, variantComputer)
+        result = pnpmExecRunner.executePnpmCommand(projectHelper, nodeExtension, nodeExecConfiguration)
     }
 }

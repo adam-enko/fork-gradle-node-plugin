@@ -3,52 +3,52 @@ package com.github.gradle.node.bun.task
 import com.github.gradle.node.NodeExtension
 import com.github.gradle.node.NodePlugin
 import com.github.gradle.node.task.BaseTask
-import com.github.gradle.node.util.DefaultProjectApiHelper
 import org.gradle.api.Action
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.MapProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
-import org.gradle.kotlin.dsl.listProperty
-import org.gradle.kotlin.dsl.mapProperty
-import org.gradle.kotlin.dsl.newInstance
-import org.gradle.kotlin.dsl.property
 import org.gradle.process.ExecSpec
 import javax.inject.Inject
 
-abstract class BunAbstractTask : BaseTask() {
-    @get:Inject
-    abstract val objects: ObjectFactory
+abstract class BunAbstractTask internal constructor() : BaseTask() {
 
-    @get:Inject
-    abstract val providers: ProviderFactory
+//    @get:Inject
+//    abstract val objects: ObjectFactory
+//
+//    @get:Inject
+//    abstract val providers: ProviderFactory
 
     @get:Optional
     @get:Input
-    val args = objects.listProperty<String>()
+    abstract val args: ListProperty<String>
 
     @get:Input
-    val ignoreExitValue = objects.property<Boolean>().convention(false)
+    abstract val ignoreExitValue: Property<Boolean>
 
     @get:Input
-    val environment = objects.mapProperty<String, String>()
+    abstract val environment: MapProperty<String, String>
 
     @get:Internal
-    val workingDir = objects.directoryProperty()
+    abstract val workingDir: DirectoryProperty
 
     @get:Internal
-    val execOverrides = objects.property<Action<ExecSpec>>()
+    abstract val execOverrides: Property<Action<ExecSpec>>
 
-    @get:Internal
-    val projectHelper = project.objects.newInstance<DefaultProjectApiHelper>()
+//    @get:Internal
+//    val projectHelper = project.objects.newInstance<DefaultProjectApiHelper>()
 
-    @get:Internal
-    val nodeExtension = NodeExtension[project]
+//    @get:Internal
+//    val nodeExtension = NodeExtension[project]
 
     init {
         group = NodePlugin.BUN_GROUP
-        dependsOn(BunSetupTask.NAME)
+//        dependsOn(BunSetupTask.NAME)
     }
 
     // For DSL

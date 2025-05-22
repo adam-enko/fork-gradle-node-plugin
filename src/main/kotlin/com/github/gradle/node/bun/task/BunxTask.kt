@@ -2,23 +2,27 @@ package com.github.gradle.node.bun.task
 
 import com.github.gradle.node.bun.exec.BunExecRunner
 import com.github.gradle.node.exec.NodeExecConfiguration
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.property
+import org.gradle.kotlin.dsl.newInstance
 
 abstract class BunxTask : BunAbstractTask() {
     @get:Input
-    val command = objects.property<String>()
+    abstract val command: Property<String>
 
     @TaskAction
     fun exec() {
         val command = command.map { listOf(it) }.get().plus(args.get())
         val nodeExecConfiguration =
             NodeExecConfiguration(
-                command, environment.get(), workingDir.asFile.orNull,
-                ignoreExitValue.get(), execOverrides.orNull
+                command,
+                environment.get(),
+                workingDir.asFile.orNull,
+                ignoreExitValue.get(),
+                execOverrides.orNull,
             )
-        val bunExecRunner = objects.newInstance(BunExecRunner::class.java)
-        result = bunExecRunner.executeBunxCommand(projectHelper, nodeExtension, nodeExecConfiguration, variantComputer)
+        val bunExecRunner = objects.newInstance<BunExecRunner>()
+        result = bunExecRunner.executeBunxCommand(projectHelper, nodeExtension, nodeExecConfiguration)
     }
 }

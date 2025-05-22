@@ -6,10 +6,10 @@ import org.gradle.api.Action
 import org.gradle.api.file.ConfigurableFileTree
 import org.gradle.api.file.Directory
 import org.gradle.api.file.FileTree
+import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.*
 import org.gradle.api.tasks.PathSensitivity.RELATIVE
-import org.gradle.kotlin.dsl.property
 import java.io.File
 
 /**
@@ -17,11 +17,10 @@ import java.io.File
  */
 abstract class NpmInstallTask : NpmTask() {
     @get:Internal
-    val nodeModulesOutputFilter =
-            objects.property<Action<ConfigurableFileTree>>()
+    abstract val nodeModulesOutputFilter: Property<Action<ConfigurableFileTree>>
 
     @get:Internal
-    val fastInstall = objects.property<Boolean>()
+    abstract val fastInstall: Property<Boolean>
 
     init {
         group = NodePlugin.NPM_GROUP
@@ -73,8 +72,9 @@ abstract class NpmInstallTask : NpmTask() {
     }
 
     private fun projectFileIfExists(name: String): Provider<File?> {
-        return nodeExtension.nodeProjectDir.map { it.file(name).asFile }
-                .flatMap { if (it.exists()) providers.provider { it } else providers.provider { null } }
+        return nodeExtension.nodeProjectDir
+            .map { it.file(name).asFile }
+            .flatMap { if (it.exists()) providers.provider { it } else providers.provider { null } }
     }
 
     @Optional
@@ -82,8 +82,11 @@ abstract class NpmInstallTask : NpmTask() {
     @Suppress("unused")
     protected fun getNodeModulesDirectory(): Provider<Directory> {
         val filter = nodeModulesOutputFilter.orNull
-        return if (filter == null && !fastInstall.get()) nodeExtension.nodeProjectDir.dir("node_modules")
-        else providers.provider { null }
+        return if (filter == null && !fastInstall.get()) {
+            nodeExtension.nodeProjectDir.dir("node_modules")
+        } else {
+            providers.provider { null }
+        }
     }
 
     @Optional
@@ -95,13 +98,13 @@ abstract class NpmInstallTask : NpmTask() {
         } else {
             val nodeModulesDirectoryProvider = nodeExtension.nodeProjectDir.dir("node_modules")
             zip(nodeModulesDirectoryProvider, nodeModulesOutputFilter)
-                    .flatMap { (nodeModulesDirectory, nodeModulesOutputFilter) ->
-                        if (nodeModulesOutputFilter != null) {
-                            val fileTree = projectHelper.fileTree(nodeModulesDirectory)
-                            nodeModulesOutputFilter.execute(fileTree)
-                            providers.provider { fileTree }
-                        } else providers.provider { null }
-                    }
+                .flatMap { (nodeModulesDirectory, nodeModulesOutputFilter) ->
+                    if (nodeModulesOutputFilter != null) {
+                        val fileTree = projectHelper.fileTree(nodeModulesDirectory)
+                        nodeModulesOutputFilter.execute(fileTree)
+                        providers.provider { fileTree }
+                    } else providers.provider { null }
+                }
         }
     }
 
@@ -127,7 +130,7 @@ abstract class NpmInstallTask : NpmTask() {
         if (npmVersion.isBlank()) {
             if (nodeExtension.version.get().split('.').first().toInt() <= 14)
                 return true
-        } else if (npmVersion.split('.').first().toInt() < 7 ) {
+        } else if (npmVersion.split('.').first().toInt() < 7) {
             return true
         }
 

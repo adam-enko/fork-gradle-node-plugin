@@ -12,27 +12,33 @@ import org.gradle.process.ExecResult
 /**
  * This function is responsible for setting up the configuration used when running the tasks.
  */
-fun buildExecConfiguration(
+internal fun buildExecConfiguration(
     nodeExtension: NodeExtension,
     nodeExecConfiguration: NodeExecConfiguration,
     variantComputer: VariantComputer
-):
-        Provider<ExecConfiguration> {
+): Provider<ExecConfiguration> {
     val nodeDirProvider = nodeExtension.resolvedNodeDir
     val nodeBinDirProvider = variantComputer.computeNodeBinDir(nodeDirProvider, nodeExtension.resolvedPlatform)
-    val executableProvider = computeNodeExec(nodeExtension, nodeBinDirProvider)
+    val executable = computeNodeExec(
+        downloadEnabled = nodeExtension.download.get(),
+        resolvedPlatform = nodeExtension.resolvedPlatform.get(),
+        nodeBinDir = nodeBinDirProvider.get().asFile,
+    )
     val additionalBinPathProvider = computeAdditionalBinPath(nodeExtension, nodeBinDirProvider)
-    return zip(executableProvider, additionalBinPathProvider)
-        .map { (executable, additionalBinPath) ->
-            ExecConfiguration(
-                executable, nodeExecConfiguration.command, additionalBinPath,
-                nodeExecConfiguration.environment, nodeExecConfiguration.workingDir,
-                nodeExecConfiguration.ignoreExitValue, nodeExecConfiguration.execOverrides
-            )
-        }
+    return additionalBinPathProvider.map { additionalBinPath ->
+        ExecConfiguration(
+            executable = executable,
+            args = nodeExecConfiguration.command,
+            additionalBinPaths = additionalBinPath,
+            environment = nodeExecConfiguration.environment,
+            workingDir = nodeExecConfiguration.workingDir,
+            ignoreExitValue = nodeExecConfiguration.ignoreExitValue,
+            execOverrides = nodeExecConfiguration.execOverrides,
+        )
+    }
 }
 
-fun computeAdditionalBinPath(nodeExtension: NodeExtension, nodeBinDirProvider: Provider<Directory>):
+internal fun computeAdditionalBinPath(nodeExtension: NodeExtension, nodeBinDirProvider: Provider<Directory>):
         Provider<List<String>> {
     return zip(nodeExtension.download, nodeBinDirProvider)
         .map { (download, nodeBinDir) ->
@@ -40,8 +46,13 @@ fun computeAdditionalBinPath(nodeExtension: NodeExtension, nodeBinDirProvider: P
         }
 }
 
-class NodeExecRunner {
-    fun execute(project: ProjectApiHelper, extension: NodeExtension, nodeExecConfiguration: NodeExecConfiguration, variantComputer: VariantComputer): ExecResult {
+internal class NodeExecRunner {
+    fun execute(
+        project: ProjectApiHelper,
+        extension: NodeExtension,
+        nodeExecConfiguration: NodeExecConfiguration,
+        variantComputer: VariantComputer
+    ): ExecResult {
         val execConfiguration = buildExecConfiguration(extension, nodeExecConfiguration, variantComputer).get()
         val execRunner = ExecRunner()
 
